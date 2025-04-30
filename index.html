@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcard App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            gap: 20px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        #flip-btn {
+            background-color: #2ecc71;
+        }
+
+        #flip-btn:hover {
+            background-color: #27ae60;
+        }
+
+        .card-container {
+            perspective: 1000px;
+            width: 100%;
+            height: 300px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-front {
+            background-color: #ffffff;
+            color: #2c3e50;
+            z-index: 2;
+        }
+
+        .card-back {
+            background-color: #2c3e50;
+            color: #ffffff;
+            transform: rotateY(180deg);
+        }
+
+        .progress {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .progress-text {
+            font-size: 1rem;
+            color: #7f8c8d;
+        }
+
+        .add-card-form {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .notification.green {
+            background-color: #2ecc71;
+        }
+
+        .notification.red {
+            background-color: red;
+        }
+
+        .notification.show {
+            opacity: 1;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+
+        input, textarea {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        #add-card-btn {
+            background-color: #9b59b6;
+            margin-top: 10px;
+        }
+
+        #add-card-btn:hover {
+            background-color: #8e44ad;
+        }
+    </style>
+</head>
+<body>
+    <div id="notification" class="notification">Card added successfully!</div>
+    <div class="container">
+        <h1>Flashcard App</h1>
+        
+        <div class="progress">
+            <div class="progress-text">Card <span id="current-card">1</span> of <span id="total-cards">5</span></div>
+        </div>
+        
+        <div class="card-container">
+            <div class="card" id="flashcard">
+                <div class="card-face card-front" id="question"></div>
+                <div class="card-face card-back" id="answer"></div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="prev-btn">Previous</button>
+            <button id="flip-btn">Flip Card</button>
+            <button id="next-btn">Next</button>
+        </div>
+        
+        <div class="add-card-form">
+            <h2>Add New Card</h2>
+            <div class="form-group">
+                <label for="new-question">Question:</label>
+                <textarea id="new-question" placeholder="Enter your question"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="new-answer">Answer:</label>
+                <textarea id="new-answer" placeholder="Enter the answer"></textarea>
+            </div>
+            <button id="add-card-btn">Add Card</button>
+        </div>
+    </div>
+
+    <script>
+        // Initial flashcards data with some example questions and answers
+        let flashcards = [
+            { question: "What is the capital of France?", answer: "Paris" },
+            { question: "What is 2 + 2?", answer: "4" },
+            { question: "Who wrote 'Romeo and Juliet'?", answer: "William Shakespeare" },
+            { question: "What is the chemical symbol for water?", answer: "H₂O" },
+            { question: "What year did World War II end?", answer: "1945" }
+        ];
+        
+        // DOM elements
+        const flashcard = document.getElementById('flashcard');
+        const questionEl = document.getElementById('question');
+        const answerEl = document.getElementById('answer');
+        const currentCardEl = document.getElementById('current-card');
+        const totalCardsEl = document.getElementById('total-cards');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const flipBtn = document.getElementById('flip-btn');
+        const addCardBtn = document.getElementById('add-card-btn');
+        const newQuestion = document.getElementById('new-question');
+        const newAnswer = document.getElementById('new-answer');
+        
+        // Current card index
+        let currentCardIndex = 0;
+        
+        // Initialize the app
+        function initializeApp() {
+            displayCard();
+            updateCardCounter();
+            
+            // Event listeners
+            flashcard.addEventListener('click', flipCard);
+            flipBtn.addEventListener('click', flipCard);
+            prevBtn.addEventListener('click', previousCard);
+            nextBtn.addEventListener('click', nextCard);
+            addCardBtn.addEventListener('click', addNewCard);
+        }
+        
+        // Display the current card
+        function displayCard() {
+            const currentCard = flashcards[currentCardIndex];
+            questionEl.textContent = currentCard.question;
+            answerEl.textContent = currentCard.answer;
+        }
+        
+        // Update the card counter
+        function updateCardCounter() {
+            currentCardEl.textContent = currentCardIndex + 1;
+            totalCardsEl.textContent = flashcards.length;
+        }
+        
+        // Flip the card
+        function flipCard() {
+            flashcard.classList.toggle('flipped');
+        }
+        
+        // Check if the answer side is currently shown
+        function isAnswerShowing() {
+            return flashcard.classList.contains('flipped');
+        }
+        
+        // Change to a different card, flipping back to question side if needed
+        function changeCard(newIndex) {
+            currentCardIndex = newIndex;
+            if (isAnswerShowing()) {
+                console.log("1");
+                flipCard()
+                setTimeout(displayCard, 200);
+                updateCardCounter();
+            } else {
+                console.log("2");
+                displayCard();
+                updateCardCounter();
+            }
+            // displayCard();
+        }
+        
+        // Go to the previous card
+        function previousCard() {
+            const newIndex = (currentCardIndex - 1 + flashcards.length) % flashcards.length;
+            changeCard(newIndex);
+        }
+        
+        // Go to the next card
+        function nextCard() {
+            const newIndex = (currentCardIndex + 1) % flashcards.length;
+            changeCard(newIndex);
+        }
+                
+        // Show notification message
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            if (type == true) {
+                notification.classList.add("green");
+            } else {
+                notification.classList.add("red");
+            }
+            // Automatically hide after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Add a new flashcard
+        function addNewCard() {
+            const question = newQuestion.value.trim();
+            const answer = newAnswer.value.trim();
+            
+            if (question && answer) {
+                flashcards.push({ question, answer });
+                
+                // Clear the input fields
+                newQuestion.value = '';
+                newAnswer.value = '';
+                
+                // Update the total cards count
+                updateCardCounter();
+                
+                // Show success notification
+                showNotification('Card added successfully!', true);
+                
+                // Option: Jump to the newly added card
+                changeCard(flashcards.length - 1);
+            } else {
+                showNotification('Please enter both a question and an answer.', false);
+            }
+        }
+        
+        // Initialize the app when the page loads
+        window.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
